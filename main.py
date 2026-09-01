@@ -260,118 +260,51 @@ NEWS ARTICLES:
 
 def get_new_ai_tools():
 
-    print(
-        "\n🛠️ Searching Product Hunt "
-        "for new AI tools..."
-    )
+    print("\n🛠️ Searching Product Hunt for NEW AI tools...")
 
     try:
-
-        feed = feedparser.parse(
-            PRODUCT_HUNT_RSS
-        )
+        feed = feedparser.parse(PRODUCT_HUNT_RSS)
 
         if not feed.entries:
-
-            print(
-                "❌ No Product Hunt products found."
-            )
-
+            print("❌ No Product Hunt products found.")
             return []
 
-        print(
-            "✅ Product Hunt page loaded."
-        )
-
-        # ----------------------------------------------------
-        # AI KEYWORDS
-        # ----------------------------------------------------
+        print("✅ Product Hunt feed loaded.")
 
         ai_keywords = [
-
-            "ai",
-
-            "artificial intelligence",
-
-            "machine learning",
-
-            "llm",
-
-            "gpt",
-
-            "chatbot",
-
-            "copilot",
-
-            "ai agent",
-
-            "ai agents",
-
-            "agentic",
-
-            "automation",
-
-            "generative ai",
-
-            "voice ai",
-
-            "image ai",
-
-            "video ai",
-
-            "coding ai",
-
-            "developer ai",
-
-            "ai assistant",
-
-            "ai-powered",
-
-            "ai powered"
-
+            "ai", "artificial intelligence", "machine learning",
+            "llm", "gpt", "chatbot", "copilot",
+            "ai agent", "ai agents", "agentic", "automation",
+            "generative ai", "voice ai", "image ai", "video ai",
+            "coding ai", "developer ai", "ai assistant",
+            "ai-powered", "ai powered", "large language model"
         ]
 
         tools = []
 
-        # ----------------------------------------------------
-        # CHECK UP TO 50 RECENT PRODUCTS
-        # ----------------------------------------------------
+        # Product Hunt's feed is used only as the source of
+        # newly published product pages.
+        for article in feed.entries[:100]:
 
-        for article in feed.entries[:50]:
+            title = article.get("title", "").strip()
+            link = article.get("link", "").strip()
 
-            title = article.get(
-                "title",
-                ""
-            ).strip()
+            if not title or not link:
+                continue
+
+            # Keep only actual Product Hunt product pages.
+            if "producthunt.com/products/" not in link:
+                continue
 
             description = article.get(
                 "summary",
-                article.get(
-                    "description",
-                    ""
-                )
+                article.get("description", "")
             )
 
-            link = article.get(
-                "link",
-                ""
-            ).strip()
-
-            # ------------------------------------------------
-            # Skip incomplete products
-            # ------------------------------------------------
-
-            if not title or not link:
-
-                continue
-
-            # ------------------------------------------------
-            # Remove HTML
-            # ------------------------------------------------
-
+            # Remove HTML from the Product Hunt description.
             clean_description = re.sub(
                 r"<[^>]+>",
-                "",
+                " ",
                 description
             )
 
@@ -381,82 +314,70 @@ def get_new_ai_tools():
                 clean_description
             ).strip()
 
-            # ------------------------------------------------
-            # Ignore Product Hunt itself
-            # ------------------------------------------------
-
-            if "product hunt" in title.lower():
-
+            # Skip generic Product Hunt entries.
+            if title.lower() in {
+                "product hunt",
+                "product hunt – the best new products in tech",
+                "product hunt - the best new products in tech",
+            }:
                 continue
-
-            # ------------------------------------------------
-            # Check whether product is AI related
-            # ------------------------------------------------
 
             combined_text = (
-                title
-                + " "
-                + clean_description
+                title + " " + clean_description
             ).lower()
 
-            is_ai = False
-
-            for keyword in ai_keywords:
-
-                if keyword in combined_text:
-
-                    is_ai = True
-
-                    break
-
-            if not is_ai:
-
+            # Keep only AI-related products.
+            if not any(
+                keyword in combined_text
+                for keyword in ai_keywords
+            ):
                 continue
 
-            # ------------------------------------------------
-            # Remove duplicate products
-            # ------------------------------------------------
+            # Remove generic Product Hunt text from descriptions.
+            generic_phrases = [
+                "product hunt – the best new products in tech.",
+                "product hunt - the best new products in tech.",
+                "product hunt is a curation of the best new products, every day.",
+            ]
 
-            duplicate = False
+            for phrase in generic_phrases:
+                if clean_description.lower().startswith(
+                    phrase.lower()
+                ):
+                    clean_description = clean_description[
+                        len(phrase):
+                    ].strip()
 
-            for existing in tools:
+            if not clean_description:
+                clean_description = (
+                    "New AI product recently featured on Product Hunt."
+                )
 
-                if existing["link"] == link:
+            # Keep Telegram messages compact.
+            if len(clean_description) > 300:
+                clean_description = (
+                    clean_description[:297].rsplit(" ", 1)[0]
+                    + "..."
+                )
 
-                    duplicate = True
-
-                    break
-
-            if duplicate:
-
+            # Avoid duplicates.
+            if any(
+                existing["link"] == link
+                for existing in tools
+            ):
                 continue
-
-            # ------------------------------------------------
-            # Save product
-            # ------------------------------------------------
 
             tools.append({
-
                 "title": title,
-
-                "description":
-                    clean_description,
-
-                "link": link
-
+                "description": clean_description,
+                "link": link,
             })
 
-            # ------------------------------------------------
-            # Stop after 5 AI products
-            # ------------------------------------------------
-
             if len(tools) >= 5:
-
                 break
 
         print(
-            f"✅ Found {len(tools)} recent "
-            f"AI products."
+            f"✅ Found {len(tools)} new AI products."
         )
 
         return tools
@@ -477,56 +398,26 @@ def get_new_ai_tools():
 def format_ai_tools(tools):
 
     if not tools:
-
         return None
 
     message = ""
 
-    for number, tool in enumerate(
-        tools,
-        start=1
-    ):
+    for number, tool in enumerate(tools, start=1):
 
         title = tool["title"]
-
         description = tool["description"]
-
         link = tool["link"]
 
-        # ----------------------------------------------------
-        # Keep description short
-        # ----------------------------------------------------
-
-        if len(description) > 250:
-
-            description = (
-                description[:247]
-                + "..."
-            )
-
-        # ----------------------------------------------------
-        # Create Telegram tool section
-        # ----------------------------------------------------
-
         message += (
-
             f"{number}️⃣ {title}\n\n"
-
             f"📝 What it does:\n"
-
             f"{description}\n\n"
-
             f"🔗 Product Hunt:\n"
-
             f"{link}\n\n"
-
         )
 
         if number < len(tools):
-
-            message += (
-                "━━━━━━━━━━━━━━━━━━\n\n"
-            )
+            message += "━━━━━━━━━━━━━━━━━━\n\n"
 
     return message.strip()
 
