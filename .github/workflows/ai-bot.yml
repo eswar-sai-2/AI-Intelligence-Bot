@@ -2,9 +2,10 @@ name: AI Daily Intelligence Bot
 
 on:
   schedule:
-    # 8:00 AM IST = 2:30 AM UTC
-    - cron: "30 2 * * *"
+    # 8:07 AM IST = 2:37 AM UTC
+    - cron: "37 2 * * *"
 
+  # Allows you to test the bot manually
   workflow_dispatch:
 
 jobs:
