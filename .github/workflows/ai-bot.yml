@@ -2,7 +2,7 @@ name: AI Daily Intelligence Bot
 
 on:
   schedule:
-    # Every day at 8:05 AM India time
+    # Every day at 8:05 AM IST
     - cron: "5 8 * * *"
       timezone: "Asia/Kolkata"
 
